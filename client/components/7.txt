@@ -1,0 +1,253 @@
+You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure  
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles. 
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder
+Copy-paste this component to /components/ui folder:
+```tsx
+dynamic-action.tsx
+// component.tsx
+import * as React from "react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+export interface ActionItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+  content: React.ReactNode;
+  dimensions: {
+    width: number;
+    height: number;
+  };
+}
+
+export interface DynamicActionBarProps
+  extends React.HTMLAttributes<HTMLDivElement> {
+  actions: ActionItem[];
+}
+
+const DynamicActionBar = React.forwardRef<
+  HTMLDivElement,
+  DynamicActionBarProps
+>(({ actions, className, ...props }, ref) => {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const activeAction = activeIndex !== null ? actions[activeIndex] : null;
+
+  const BUTTON_BAR_HEIGHT = 56;
+
+  const containerAnimate = activeAction
+    ? {
+        width: activeAction.dimensions.width,
+        height: activeAction.dimensions.height + BUTTON_BAR_HEIGHT,
+      }
+    : {
+        width: 410,
+        height: BUTTON_BAR_HEIGHT,
+      };
+
+  const transition = { type: "spring", stiffness: 400, damping: 35 };
+
+  return (
+    <div
+      ref={ref}
+      className={`relative ${className}`}
+      onMouseLeave={() => setActiveIndex(null)}
+      {...props}
+    >
+      <motion.div
+        className="flex flex-col overflow-hidden rounded-2xl bg-black/5 backdrop-blur-xl"
+        animate={containerAnimate}
+        transition={transition}
+        initial={{ width: 410, height: BUTTON_BAR_HEIGHT }}
+      >
+        <div className="flex-grow overflow-hidden">
+          <AnimatePresence>
+            {activeAction && (
+              <motion.div
+                className="w-full"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, delay: 0.1 }}
+              >
+                {activeAction.content}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div
+          className="flex flex-shrink-0 items-center justify-center gap-2 px-2"
+          style={{ height: `${BUTTON_BAR_HEIGHT}px` }}
+        >
+          {actions.map((action, index) => {
+            const Icon = action.icon;
+            return (
+              <button
+                key={action.id}
+                onMouseEnter={() => setActiveIndex(index)}
+                className="flex items-center justify-center gap-2 rounded-2xl py-3 px-4 text-zinc-800 transition-colors duration-300 hover:bg-zinc-950 hover:text-white"
+              >
+                <Icon className="size-6" />
+                <span className="font-bold">{action.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </motion.div>
+    </div>
+  );
+});
+
+DynamicActionBar.displayName = "DynamicActionBar";
+
+export default DynamicActionBar;
+
+demo.tsx
+// demo.tsx
+import * as React from "react";
+import DynamicActionBar, { type ActionItem } from "@/components/ui/dynamic-action";
+import {
+  LayoutGrid,
+  CodeXml,
+  BookText,
+  MessageSquare,
+  Users,
+  Link,
+} from "lucide-react";
+
+const AppsContent = () => (
+  <div className="flex flex-col items-center p-4">
+    <div className="flex w-[95%] cursor-pointer items-center gap-3 rounded-2xl py-3 duration-300 hover:bg-black/5 hover:px-3">
+      <Users className="h-16 w-16 shrink-0 rounded-xl bg-blue-100 p-4 text-blue-600" />
+      <div className="flex w-full flex-col items-start">
+        <p className="font-bold">Gather</p>
+        <p className="opacity-80">Virtual Office</p>
+      </div>
+      <span className="block shrink-0 rounded-lg border border-black/50 py-1 px-2 text-sm opacity-80">
+        Mac
+      </span>
+    </div>
+    <div className="flex w-[95%] cursor-pointer items-center gap-3 rounded-2xl py-3 duration-300 hover:bg-black/5 hover:px-3">
+      <MessageSquare className="h-16 w-16 shrink-0 rounded-xl bg-purple-100 p-4 text-purple-600" />
+      <div className="flex w-full flex-col items-start">
+        <p className="font-bold">Slack</p>
+        <p className="opacity-80">Communication App</p>
+      </div>
+      <span className="block shrink-0 rounded-lg border border-black/50 py-1 px-2 text-sm opacity-80">
+        Windows
+      </span>
+    </div>
+    <div className="mt-4 h-[2px] w-[95%] bg-black/10"></div>
+  </div>
+);
+
+const ComponentsContent = () => (
+  <div className="flex flex-col items-center gap-1 py-4 px-6">
+    {[
+      { name: "Action Bar", tag: "Dynamic", date: "06 - 12" },
+      { name: "Image Expand", tag: "Overlay", date: "05 - 12" },
+      { name: "Read Time", tag: "Scroll", date: "04 - 12" },
+    ].map((item) => (
+      <div key={item.name} className="group w-full">
+        <div className="mx-auto flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl py-2 duration-300 group-hover:w-[95%] group-hover:bg-black/5 group-hover:px-3">
+          <div className="flex items-center gap-3">
+            <CodeXml className="size-6 shrink-0 opacity-75" />
+            <span className="font-bold">{item.name}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="block shrink-0 rounded-lg border border-black/50 py-1 px-2 text-sm opacity-80">
+              {item.tag}
+            </span>
+            <span>{item.date}</span>
+          </div>
+        </div>
+      </div>
+    ))}
+    <div className="mt-4 h-[2px] w-full bg-black/10"></div>
+  </div>
+);
+
+const NotesContent = () => (
+  <div className="flex flex-col items-center gap-1 p-4">
+    {[
+      { name: "Changelog using GitHub", date: "Jun, 24" },
+      { name: "Feedback in Slack", date: "May, 24" },
+    ].map((item) => (
+      <div key={item.name} className="group w-full">
+        <div className="mx-auto flex w-full cursor-pointer items-center justify-between gap-3 rounded-2xl py-2 duration-300 group-hover:w-[95%] group-hover:bg-black/5 group-hover:px-3">
+          <div className="flex items-center gap-3">
+            <Link className="size-6" />
+            <span className="font-bold">{item.name}</span>
+          </div>
+          <span>{item.date}</span>
+        </div>
+      </div>
+    ))}
+    <div className="mt-4 h-[2px] w-full bg-black/10"></div>
+  </div>
+);
+
+const DynamicActionBarDemo = () => {
+  const actions: ActionItem[] = [
+    {
+      id: "apps",
+      label: "Apps",
+      icon: LayoutGrid,
+      content: <AppsContent />,
+      dimensions: { width: 500, height: 234 },
+    },
+    {
+      id: "components",
+      label: "Components",
+      icon: CodeXml,
+      content: <ComponentsContent />,
+      dimensions: { width: 460, height: 206 },
+    },
+    {
+      id: "notes",
+      label: "Notes",
+      icon: BookText,
+      content: <NotesContent />,
+      dimensions: { width: 480, height: 148 },
+    },
+  ];
+
+  return (
+    <div className="flex h-[450px] w-full items-end justify-center rounded-lg bg-gradient-to-br from-pink-300 via-rose-300 to-orange-300 p-4 pb-14">
+      <DynamicActionBar actions={actions} />
+    </div>
+  );
+};
+
+export { DynamicActionBarDemo as DemoOne };
+```
+
+Install NPM dependencies:
+```bash
+framer-motion
+```
+
+Implementation Guidelines
+ 1. Analyze the component structure and identify all required dependencies
+ 2. Review the component's argumens and state
+ 3. Identify any required context providers or hooks and install them
+ 4. Questions to Ask
+ - What data/props will be passed to this component?
+ - Are there any specific state management requirements?
+ - Are there any required assets (images, icons, etc.)?
+ - What is the expected responsive behavior?
+ - What is the best place to use this component in the app?
+
+Steps to integrate
+ 0. Copy paste all the code above in the correct directories
+ 1. Install external dependencies
+ 2. Fill image assets with Unsplash stock images you know exist
+ 3. Use lucide-react icons for svgs or logos if component requires them

@@ -1,121 +1,93 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { AnimatePresence, motion } from 'framer-motion' // eslint-disable-line no-unused-vars
+import { useAuth } from './hooks/useAuth'
+import { useBets } from './hooks/useBets'
+
+import Sidebar     from './components/layout/Sidebar'
+import TopBar      from './components/layout/TopBar'
+import BottomNav   from './components/layout/BottomNav'
+
+import Auth        from './pages/Auth'
+import Dashboard   from './pages/Dashboard'
+import Bets        from './pages/Bets'
+import Matches     from './pages/Matches'
+import Insights    from './pages/Insights'
+import Profile     from './pages/Profile'
+import MatchDetail from './pages/MatchDetail'
+
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+function Shell() {
+  const [page, setPage]           = useState('dashboard')
+  const [statsKey, setStatsKey]   = useState(0)
+  const [activeMatchId, setActiveMatchId]   = useState(null)
+  const [activeMatchTab, setActiveMatchTab] = useState(null)
+  const { bets }                  = useBets()
+
+  const pendingCount = bets.filter(b => b.status === 'pending').length
+  function bumpStats() { setStatsKey(k => k + 1) }
+
+  function openMatch(matchId, tab) { setActiveMatchId(matchId); setActiveMatchTab(tab || null) }
+  function closeMatch()            { setActiveMatchId(null); setActiveMatchTab(null) }
+
+  // Match detail overrides everything else
+  if (activeMatchId) {
+    return (
+      <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+        <Sidebar page={page} setPage={(p) => { setPage(p); closeMatch() }} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <div className="md:ml-(--sidebar-w) flex flex-col min-h-screen">
+            <AnimatePresence mode="wait">
+              <motion.div key={`match-${activeMatchId}`}
+                initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -40 }} transition={{ duration: 0.25 }}>
+                <MatchDetail matchId={activeMatchId} onBack={closeMatch} defaultTab={activeMatchTab} />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
+        <BottomNav page={page} setPage={(p) => { setPage(p); closeMatch() }} />
+      </div>
+    )
+  }
+
+  const PAGES = {
+    dashboard: <Dashboard statsKey={statsKey} bumpStats={bumpStats} setPage={setPage} openMatch={openMatch} />,
+    bets:      <Bets      statsKey={statsKey} bumpStats={bumpStats} />,
+    matches:   <Matches   openMatch={openMatch} />,
+    insights:  <Insights openMatch={openMatch} />,
+    profile:   <Profile />,
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
+      <Sidebar page={page} setPage={setPage} />
 
-      <div className="ticks"></div>
+      <div className="flex-1 flex flex-col min-w-0" style={{ marginLeft: 0 }}
+        data-main="true">
+        <div className="md:ml-(--sidebar-w) flex flex-col min-h-screen">
+          <TopBar page={page} pendingCount={pendingCount} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+          <main className="flex-1 px-4 py-5 md:px-8 md:py-6 max-w-5xl w-full mx-auto">
+            <AnimatePresence mode="wait">
+              <motion.div key={page}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22 }}>
+                {PAGES[page]}
+              </motion.div>
+            </AnimatePresence>
+          </main>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <BottomNav page={page} setPage={setPage} />
+    </div>
   )
 }
 
-export default App
+export default function App() {
+  const { currentUser } = useAuth()
+  return currentUser ? <Shell /> : <Auth />
+}
