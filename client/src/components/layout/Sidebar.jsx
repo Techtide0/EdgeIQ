@@ -56,7 +56,7 @@ export default function Sidebar({ page, setPage }) {
 
       {/* Theme toggle */}
       <div className="px-4 pb-5 pt-4">
-        <button onClick={toggle}
+        <button type="button" onClick={toggle}
           className="btn-ghost w-full justify-center text-xs"
           style={{ color: 'var(--text-muted)' }}>
           {theme === 'dark' ? '☀ Light mode' : '🌙 Dark mode'}

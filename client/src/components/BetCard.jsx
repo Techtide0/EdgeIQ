@@ -72,12 +72,16 @@ export default function BetCard({ bet, onUpdate, onDelete, compact }) {
               placeholder={field.charAt(0).toUpperCase() + field.slice(1)}
               onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
               className="px-3 py-2 rounded-lg text-sm outline-none"
-              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'inherit' }} />
+              style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'inherit' }}
+              onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'} />
           ))}
         </div>
         <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
           className="px-3 py-2 rounded-lg text-sm outline-none"
-          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'inherit' }}>
+          style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'inherit' }}
+          onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+          onBlur={e => e.target.style.borderColor = 'var(--border)'}>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CONFIG[s]?.label || s}</option>)}
         </select>
         <div className="flex gap-2">
@@ -121,12 +125,12 @@ export default function BetCard({ bet, onUpdate, onDelete, compact }) {
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            <button onClick={() => setEditing(true)} disabled={loading}
+            <button type="button" onClick={() => setEditing(true)} disabled={loading}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
               style={{ background: 'var(--surface2)', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
               <Edit2 size={13} />
             </button>
-            <button onClick={handleDelete} disabled={loading}
+            <button type="button" onClick={handleDelete} disabled={loading}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
               style={{ background: 'var(--danger-dim)', border: 'none', cursor: 'pointer', color: 'var(--danger)' }}>
               <Trash2 size={13} />
@@ -159,17 +163,17 @@ export default function BetCard({ bet, onUpdate, onDelete, compact }) {
           {pending && !cashoutMode && (
             <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
               className="flex gap-2">
-              <button onClick={() => resolve('won')} disabled={loading}
+              <button type="button" onClick={() => resolve('won')} disabled={loading}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white transition-opacity"
                 style={{ background: 'var(--accent)', border: 'none', cursor: 'pointer' }}>
                 <Trophy size={12} /> Won
               </button>
-              <button onClick={() => resolve('lost')} disabled={loading}
+              <button type="button" onClick={() => resolve('lost')} disabled={loading}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white transition-opacity"
                 style={{ background: 'var(--danger)', border: 'none', cursor: 'pointer' }}>
                 <XCircle size={12} /> Lost
               </button>
-              <button onClick={() => setCashoutMode(true)} disabled={loading}
+              <button type="button" onClick={() => setCashoutMode(true)} disabled={loading}
                 className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold text-white transition-opacity"
                 style={{ background: 'var(--info)', border: 'none', cursor: 'pointer' }}>
                 <DollarSign size={12} /> Cashout
@@ -187,7 +191,9 @@ export default function BetCard({ bet, onUpdate, onDelete, compact }) {
                 value={cashoutInput} min="0" max={bet.potentialWin} step="any"
                 onChange={e => { setCashoutInput(e.target.value); setCashoutError(null) }}
                 className="px-3 py-2 rounded-xl text-sm outline-none w-full"
-                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'inherit' }} />
+                style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', fontFamily: 'inherit' }}
+                onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+                onBlur={e => e.target.style.borderColor = 'var(--border)'} />
               {cashoutError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{cashoutError}</p>}
               <div className="flex gap-2">
                 <button onClick={handleCashout} disabled={loading}

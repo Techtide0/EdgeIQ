@@ -91,6 +91,7 @@
   }
   .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 16px -4px rgba(22,163,74,0.4); }
   .btn-primary:active { transform: scale(0.97); }
+  .btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   .btn-ghost {
     background: transparent;
@@ -107,6 +108,7 @@
     gap: 6px;
   }
   .btn-ghost:hover { background: var(--surface2); border-color: var(--text-muted); }
+  .btn-ghost:focus-visible { outline: 2px solid var(--text-muted); outline-offset: 2px; }
 
   .btn-danger {
     background: var(--danger);
@@ -123,6 +125,7 @@
     gap: 4px;
   }
   .btn-danger:hover { opacity: 0.85; }
+  .btn-danger:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
 
   .live-dot {
     width: 7px; height: 7px;

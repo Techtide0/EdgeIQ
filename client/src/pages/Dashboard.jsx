@@ -172,7 +172,7 @@ function QuickInsights({ matches, setPage, openMatch }) {
           </div>
           <h2 className="text-sm font-semibold" style={{ color: 'var(--text)' }}>AI Match Insights</h2>
         </div>
-        <button onClick={() => setPage('insights')}
+        <button type="button" onClick={() => setPage('insights')}
           className="flex items-center gap-1 text-xs font-medium"
           style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>
           See all <ChevronRight size={13} />
@@ -244,7 +244,7 @@ export default function Dashboard({ onAddBet, statsKey, bumpStats, setPage, open
                 </span>
               )}
             </h2>
-            <button onClick={() => setPage('bets')}
+            <button type="button" onClick={() => setPage('bets')}
               className="flex items-center gap-1 text-xs font-medium"
               style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer' }}>
               View all <ArrowRight size={13} />

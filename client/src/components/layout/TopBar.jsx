@@ -43,7 +43,7 @@ export default function TopBar({ page, pendingCount }) {
         )}
 
         {/* Theme toggle (mobile) */}
-        <button onClick={toggle}
+        <button type="button" onClick={toggle}
           className="btn-ghost p-2 md:hidden"
           style={{ padding: '6px' }}>
           {theme === 'dark'
