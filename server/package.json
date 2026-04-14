@@ -5,10 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js",
-    "test": "jest",
-    "test:unit": "jest __tests__/unit",
-    "test:integration": "jest __tests__/integration --testTimeout=600000"
+    "start": "node index.js"
   },
   "keywords": [],
   "author": "",
@@ -29,10 +26,7 @@
   },
   "devDependencies": {
     "eslint": "^10.1.0",
-    "jest": "^30.3.0",
-    "mongodb-memory-server": "^11.0.1",
     "nodemon": "^3.1.14",
-    "prettier": "^3.8.1",
-    "supertest": "^7.2.2"
+    "prettier": "^3.8.1"
   }
 }
