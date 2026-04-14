@@ -11,10 +11,11 @@ const schema = new mongoose.Schema({
     type: String, default: 'green',
     enum: ['green', 'blue', 'purple', 'orange', 'red', 'teal', 'gold', 'pink'],
   },
-  avatarEmoji: { type: String, default: '' },  // optional emoji override
-  avatarUrl:   { type: String, default: '' },  // Firebase Storage photo URL
+  avatarEmoji: { type: String, default: '', maxlength: 8 },   // emoji is max 2 chars (some are 2 code points)
+  avatarUrl:   { type: String, default: '', maxlength: 500 }, // Firebase Storage photo URL
 
   notificationPrefs: {
+    prematch:      { type: NotifPrefSchema, default: () => ({ enabled: true  }) },
     goals:         { type: NotifPrefSchema, default: () => ({ enabled: true  }) },
     redCards:      { type: NotifPrefSchema, default: () => ({ enabled: true  }) },
     cancelledGoal: { type: NotifPrefSchema, default: () => ({ enabled: true  }) },

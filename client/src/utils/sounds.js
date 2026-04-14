@@ -2,9 +2,9 @@
  * Notification sound engine.
  *
  * Whistle sounds (kickoff / halfTime / fullTime) use the file at
- *   /sounds/whistle.mp3   ← drop your whistle file there
+ *   /sounds/78508__joedeshon__referee_whistle_01 (1).wav
  *
- * Goal, redCard, and cancelledGoal are synthesized with the Web Audio API.
+ * Goal, redCard, cancelledGoal, and prematch are synthesized with the Web Audio API.
  */
 
 // ── Web Audio helpers ─────────────────────────────────────────────────────────
@@ -39,12 +39,12 @@ function playGoal() {
   try {
     const ctx = getCtx()
     const t   = ctx.currentTime
-    // Fast ascending high-pitch fanfare: C6 → E6 → G6 → C7 (held) + E7 shimmer
-    tone(ctx, 1047, t,        0.09, 'sine', 0.30)   // C6
-    tone(ctx, 1319, t + 0.08, 0.09, 'sine', 0.30)   // E6
-    tone(ctx, 1568, t + 0.16, 0.09, 'sine', 0.30)   // G6
-    tone(ctx, 2093, t + 0.24, 0.40, 'sine', 0.32)   // C7 – held
-    tone(ctx, 2637, t + 0.24, 0.28, 'sine', 0.13)   // E7 – shimmer overtone
+    // Fast ascending fanfare: C6 → E6 → G6 → C7 (held) + E7 shimmer
+    tone(ctx, 1047, t,        0.09, 'sine', 0.30)
+    tone(ctx, 1319, t + 0.08, 0.09, 'sine', 0.30)
+    tone(ctx, 1568, t + 0.16, 0.09, 'sine', 0.30)
+    tone(ctx, 2093, t + 0.24, 0.40, 'sine', 0.32)
+    tone(ctx, 2637, t + 0.24, 0.28, 'sine', 0.13)
   } catch { /* Web Audio unavailable */ }
 }
 
@@ -52,10 +52,10 @@ function playRedCard() {
   try {
     const ctx = getCtx()
     const t   = ctx.currentTime
-    // Sharp urgent double sting, then a drop — feels alarming
-    tone(ctx, 1760, t,        0.13, 'sawtooth', 0.22)  // A5
-    tone(ctx, 1760, t + 0.16, 0.13, 'sawtooth', 0.22)  // A5 repeat
-    tone(ctx, 1397, t + 0.32, 0.28, 'sawtooth', 0.18)  // F5 – dramatic drop
+    // Sharp urgent double sting + dramatic drop
+    tone(ctx, 1760, t,        0.13, 'sawtooth', 0.22)
+    tone(ctx, 1760, t + 0.16, 0.13, 'sawtooth', 0.22)
+    tone(ctx, 1397, t + 0.32, 0.28, 'sawtooth', 0.18)
   } catch { /* Web Audio unavailable */ }
 }
 
@@ -63,20 +63,41 @@ function playCancelledGoal() {
   try {
     const ctx = getCtx()
     const t   = ctx.currentTime
-    // Descending "reversal" motif — high to low, feels like a decision overturned
-    tone(ctx, 1568, t,        0.13, 'sine', 0.28)   // G6
-    tone(ctx, 1319, t + 0.11, 0.13, 'sine', 0.25)   // E6
-    tone(ctx, 1047, t + 0.22, 0.13, 'sine', 0.22)   // C6
-    tone(ctx, 784,  t + 0.33, 0.35, 'sine', 0.20)   // G5 – held low resolution
+    // Descending "reversal" — feels like a decision overturned
+    tone(ctx, 1568, t,        0.13, 'sine', 0.28)
+    tone(ctx, 1319, t + 0.11, 0.13, 'sine', 0.25)
+    tone(ctx, 1047, t + 0.22, 0.13, 'sine', 0.22)
+    tone(ctx, 784,  t + 0.33, 0.35, 'sine', 0.20)
+  } catch { /* Web Audio unavailable */ }
+}
+
+/**
+ * Pre-match countdown alert — a gentle two-tone "heads-up" chime.
+ * Distinct from the whistle; feels like a calendar reminder.
+ */
+function playPrematch() {
+  try {
+    const ctx = getCtx()
+    const t   = ctx.currentTime
+    // Soft rising pair: E5 → A5, then a second slightly louder repeat
+    tone(ctx, 659,  t,        0.18, 'sine', 0.22)   // E5
+    tone(ctx, 880,  t + 0.20, 0.28, 'sine', 0.26)   // A5 — held
+    tone(ctx, 659,  t + 0.55, 0.14, 'sine', 0.18)   // E5 echo
+    tone(ctx, 880,  t + 0.70, 0.36, 'sine', 0.22)   // A5 — softer tail
   } catch { /* Web Audio unavailable */ }
 }
 
 // ── File-based sound ──────────────────────────────────────────────────────────
 
-function playFile(path) {
+const WHISTLE_PATH = '/sounds/78508__joedeshon__referee_whistle_01 (1).wav'
+
+function playWhistle() {
   try {
-    const audio = new Audio(path)
-    audio.play().catch(() => {})
+    const audio = new Audio(WHISTLE_PATH)
+    audio.volume = 0.7
+    audio.play().catch(() => {
+      // Autoplay policy blocked it — ignore silently
+    })
   } catch { /* unavailable */ }
 }
 
@@ -84,14 +105,17 @@ function playFile(path) {
 
 /**
  * Play the sound assigned to a notification type key.
- * @param {'goals'|'redCards'|'kickoff'|'halfTime'|'fullTime'|'cancelledGoal'} notifKey
+ * @param {'goals'|'redCards'|'kickoff'|'halfTime'|'fullTime'|'cancelledGoal'|'prematch'} notifKey
  */
 export function playSound(notifKey) {
   switch (notifKey) {
     case 'kickoff':
     case 'halfTime':
     case 'fullTime':
-      playFile('/sounds/whistle.mp3')
+      playWhistle()
+      break
+    case 'prematch':
+      playPrematch()
       break
     case 'goals':
       playGoal()

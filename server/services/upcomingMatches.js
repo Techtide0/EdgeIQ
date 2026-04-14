@@ -1,4 +1,4 @@
-const fetch         = require('node-fetch')
+const { apiFetch }  = require('../config/apiClient')
 const UpcomingCache = require('../models/UpcomingCache')
 const MatchSnapshot = require('../models/MatchSnapshot')
 
@@ -25,13 +25,6 @@ function memValid() {
     (Date.now() - memCache.fetchedAt < CACHE_DURATION_MS)
 }
 
-function apiHeaders() {
-  const isRapidAPI = process.env.APIFOOTBALL_HOST?.includes('rapidapi.com')
-  return isRapidAPI
-    ? { 'x-rapidapi-key': process.env.APIFOOTBALL_KEY, 'x-rapidapi-host': process.env.APIFOOTBALL_HOST }
-    : { 'x-apisports-key': process.env.APIFOOTBALL_KEY }
-}
-
 function dateOffset(days) {
   const d = new Date()
   d.setDate(d.getDate() + days)
@@ -39,15 +32,7 @@ function dateOffset(days) {
 }
 
 async function fetchForDate(date) {
-  const res = await fetch(
-    `https://${process.env.APIFOOTBALL_HOST}/fixtures?date=${date}`,
-    { headers: apiHeaders() }
-  )
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`API-Football ${res.status}: ${body.slice(0, 120)}`)
-  }
-  const json = await res.json()
+  const json = await apiFetch(`/fixtures?date=${date}`)
   return json.response
     .filter(f => LEAGUE_IDS.has(f.league.id) && f.fixture.status.short === 'NS')
     .map(f => ({

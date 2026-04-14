@@ -1,5 +1,5 @@
-const fetch     = require('node-fetch')
-const TeamStats = require('../models/TeamStats')
+const { apiFetch } = require('../config/apiClient')
+const TeamStats    = require('../models/TeamStats')
 
 const SEASON        = 2024
 const TTL_MS        = 7 * 24 * 60 * 60 * 1000   // 7 days
@@ -19,21 +19,13 @@ async function fetchAndCacheTeamStats(teamId, leagueId) {
   const cached = await TeamStats.findOne({ teamId: String(teamId) })
   if (cached) return cached
 
-  const isRapidAPI = process.env.APIFOOTBALL_HOST?.includes('rapidapi.com')
-  const headers = isRapidAPI
-    ? { 'x-rapidapi-key': process.env.APIFOOTBALL_KEY, 'x-rapidapi-host': process.env.APIFOOTBALL_HOST }
-    : { 'x-apisports-key': process.env.APIFOOTBALL_KEY }
-
-  const res = await fetch(
-    `https://${process.env.APIFOOTBALL_HOST}/teams/statistics?team=${teamId}&league=${leagueId}&season=${SEASON}`,
-    { headers }
-  )
-
-  if (!res.ok) throw new Error(`team stats fetch failed: ${res.status}`)
-
-  const json  = await res.json()
+  const json  = await apiFetch(`/teams/statistics?team=${teamId}&league=${leagueId}&season=${SEASON}`)
   const s     = json.response
-  const games = s.fixtures?.played?.total || 1
+  const games    = s.fixtures?.played?.total || 1
+  const homePlayed = s.fixtures?.played?.home || 1
+  const awayPlayed = s.fixtures?.played?.away || 1
+  const homeWins   = s.fixtures?.wins?.home   || 0
+  const awayWins   = s.fixtures?.wins?.away   || 0
 
   const totalYellow = sumCardPeriods(s.cards?.yellow)
   const totalRed    = sumCardPeriods(s.cards?.red)
@@ -55,6 +47,17 @@ async function fetchAndCacheTeamStats(teamId, leagueId) {
     cleanSheetRate:    parseFloat(((s.clean_sheet?.total    || 0) / games * 100).toFixed(1)),
     failedToScore:     s.failed_to_score?.total || 0,
     failedToScoreRate: parseFloat(((s.failed_to_score?.total || 0) / games * 100).toFixed(1)),
+    // Home / Away split
+    homeGamesPlayed:      homePlayed,
+    awayGamesPlayed:      awayPlayed,
+    homeWins,
+    awayWins,
+    homeWinRate:          parseFloat(((homeWins / homePlayed) * 100).toFixed(1)),
+    awayWinRate:          parseFloat(((awayWins / awayPlayed) * 100).toFixed(1)),
+    avgGoalsScoredHome:   parseFloat(s.goals?.for?.average?.home)     || 0,
+    avgGoalsScoredAway:   parseFloat(s.goals?.for?.average?.away)     || 0,
+    avgGoalsConcededHome: parseFloat(s.goals?.against?.average?.home) || 0,
+    avgGoalsConcededAway: parseFloat(s.goals?.against?.average?.away) || 0,
     fetchedAt:         new Date(),
     expiresAt:         new Date(Date.now() + TTL_MS),
   }

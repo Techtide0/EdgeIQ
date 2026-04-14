@@ -52,6 +52,7 @@ const AVATAR_EMOJIS = ['', '⚽', '🏆', '🎯', '🔥', '⚡', '🦁', '🐺',
 // ─────────────────────────────────────────────────────────────────────────────
 
 const NOTIF_TYPES = [
+  { key: 'prematch',       emoji: '⏰', label: 'Pre-Match Alert', desc: '~15 min before kickoff'         },
   { key: 'goals',          emoji: '⚽', label: 'Goals',           desc: 'When a goal is scored'          },
   { key: 'redCards',       emoji: '🟥', label: 'Red Cards',       desc: 'Player sent off'                },
   { key: 'cancelledGoal',  emoji: '🚫', label: 'Cancelled Goal',  desc: 'Goal ruled out by VAR'          },

@@ -84,6 +84,22 @@ async function processSubscriptions() {
         const prefs     = await getUserPrefs(sub.userId)
         let updated = false
 
+        // Pre-match reminder — fires ~15 min before kickoff (window: 10–20 min)
+        if (!sub.notifiedPrematch && isPrefEnabled(prefs, 'prematch') &&
+            match.status === 'NS' && match.startTime) {
+          const minsUntilKO = (new Date(match.startTime) - Date.now()) / 60_000
+          if (minsUntilKO >= 10 && minsUntilKO <= 20) {
+            await sendPush(sub.subscription, {
+              title: '⏰ Match Starting Soon',
+              body:  `${match.homeTeam.name} vs ${match.awayTeam.name} kicks off in ~${Math.round(minsUntilKO)} minutes`,
+              matchId: match.matchId,
+              sound: 'prematch',
+            })
+            sub.notifiedPrematch = true
+            updated = true
+          }
+        }
+
         // Kickoff notification
         if (!sub.notifiedKickoff && isPrefEnabled(prefs, 'kickoff') &&
             (isLive || match.status === '1H') && match.minute <= 2) {
@@ -161,11 +177,12 @@ async function processSubscriptions() {
 
         if (updated) {
           await PushSubscription.updateOne({ _id: sub._id }, {
-            lastEventCount:  sub.lastEventCount,
-            notifiedKickoff: sub.notifiedKickoff,
-            notifiedHT:      sub.notifiedHT,
-            notifiedFT:      sub.notifiedFT,
-            lastNotifiedAt:  new Date(),
+            lastEventCount:   sub.lastEventCount,
+            notifiedPrematch: sub.notifiedPrematch,
+            notifiedKickoff:  sub.notifiedKickoff,
+            notifiedHT:       sub.notifiedHT,
+            notifiedFT:       sub.notifiedFT,
+            lastNotifiedAt:   new Date(),
           })
         }
       }

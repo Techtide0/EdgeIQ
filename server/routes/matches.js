@@ -1,34 +1,16 @@
 const router        = require('express').Router()
-const fetch         = require('node-fetch')
 const authMiddleware = require('../middleware/authMiddleware')
 const { getLiveMatches, getLastKnown, getLastUpdatedMs }           = require('../services/liveMatches')
 const { getUpcomingMatches, getLastKnown: getUpcomingLastKnown }   = require('../services/upcomingMatches')
 const { getAnalysis, computeAndSave }                              = require('../services/analysis')
 const { getMatchDetail }                                           = require('../services/matchDetail')
+const { apiFetch }  = require('../config/apiClient')
 const OddsCache     = require('../models/OddsCache')
-const StandingCache = require('../models/StandingCache')
 const MatchSnapshot = require('../models/MatchSnapshot')
 const DayCache      = require('../models/DayCache')
 const { getLogo }   = require('../services/teamLogos')
 
 router.use(authMiddleware)
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function apiHeaders() {
-  const isRapidAPI = process.env.APIFOOTBALL_HOST?.includes('rapidapi.com')
-  return isRapidAPI
-    ? { 'x-rapidapi-key': process.env.APIFOOTBALL_KEY, 'x-rapidapi-host': process.env.APIFOOTBALL_HOST }
-    : { 'x-apisports-key': process.env.APIFOOTBALL_KEY }
-}
-
-async function apiFetch(path) {
-  const url = `https://${process.env.APIFOOTBALL_HOST}${path}`
-  const res = await fetch(url, { headers: apiHeaders() })
-  if (!res.ok) throw new Error(`API-Football ${res.status} on ${path}`)
-  const json = await res.json()
-  return json
-}
 
 function lastUpdatedLabel(ms) {
   if (!ms) return null
@@ -305,47 +287,6 @@ router.get('/analysis/:matchId', async (req, res) => {
   } catch (err) {
     console.error('[analysis]', err.message)
     res.status(500).json({ error: 'Analysis failed' })
-  }
-})
-
-// ─── Standings (MongoDB-cached 24 h) ─────────────────────────────────────────
-
-router.get('/:leagueId/standings', async (req, res) => {
-  const leagueId = Number(req.params.leagueId)
-  const season   = Number(req.query.season) || (new Date().getFullYear())
-
-  try {
-    // 1. Serve from DB if still valid
-    const cached = await StandingCache.findOne({ leagueId, season })
-    if (cached && cached.expiresAt > new Date()) {
-      return res.json({ name: cached.name, season: cached.season, standings: cached.standings })
-    }
-
-    // 2. Fetch from API-Football
-    const json     = await apiFetch(`/standings?league=${leagueId}&season=${season}`)
-    const league   = json.response?.[0]?.league
-    const standings = league?.standings?.[0] || []
-
-    // 3. Save to MongoDB (24 h TTL)
-    StandingCache.findOneAndUpdate(
-      { leagueId, season },
-      {
-        leagueId, season,
-        name:      league?.name,
-        standings,
-        fetchedAt: new Date(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      },
-      { upsert: true }
-    ).catch(() => {})
-
-    res.json({ name: league?.name, season, standings })
-  } catch (err) {
-    console.error('[standings]', err.message)
-    // Fallback: serve stale DB data rather than an error
-    const stale = await StandingCache.findOne({ leagueId, season }).catch(() => null)
-    if (stale) return res.json({ name: stale.name, season: stale.season, standings: stale.standings })
-    res.status(500).json({ error: err.message })
   }
 })
 

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Wallet, Tv2, Lightbulb, UserCircle, TrendingUp } from 'lucide-react'
+import { LayoutDashboard, Wallet, Tv2, Lightbulb, UserCircle, Download } from 'lucide-react'
 import { useTheme } from '../../context/ThemeContext'
 
 const NAV = [
@@ -10,7 +10,7 @@ const NAV = [
   { id: 'profile',   label: 'Profile',    Icon: UserCircle },
 ]
 
-export default function Sidebar({ page, setPage }) {
+export default function Sidebar({ page, setPage, canInstall, onInstall }) {
   const { theme, toggle } = useTheme()
 
   return (
@@ -18,11 +18,8 @@ export default function Sidebar({ page, setPage }) {
       className="hidden md:flex flex-col fixed left-0 top-0 h-full rounded-none z-40">
 
       {/* Logo */}
-      <div className="flex items-center gap-2 px-5 py-5">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'var(--accent)' }}>
-          <TrendingUp size={16} className="text-white" />
-        </div>
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <img src="/edgeiq.png" alt="EdgeIQ mark" className="w-9 h-9 rounded-lg object-cover" />
         <span className="text-base font-bold tracking-tight" style={{ color: 'var(--text)' }}>EdgeIQ</span>
       </div>
 
@@ -54,8 +51,15 @@ export default function Sidebar({ page, setPage }) {
         })}
       </nav>
 
-      {/* Theme toggle */}
-      <div className="px-4 pb-5 pt-4">
+      {/* Theme toggle + Install */}
+      <div className="px-4 pb-5 pt-4 flex flex-col gap-2">
+        {canInstall && (
+          <button type="button" onClick={onInstall}
+            className="btn-primary w-full justify-center text-xs gap-1.5">
+            <Download size={13} />
+            Install App
+          </button>
+        )}
         <button type="button" onClick={toggle}
           className="btn-ghost w-full justify-center text-xs"
           style={{ color: 'var(--text-muted)' }}>

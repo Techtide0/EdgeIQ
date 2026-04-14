@@ -1,4 +1,4 @@
-const fetch         = require('node-fetch')
+const { apiFetch }  = require('../config/apiClient')
 const MatchSnapshot = require('../models/MatchSnapshot')
 const { getLogo }   = require('./teamLogos')
 
@@ -38,13 +38,6 @@ function isCacheValid() {
     (Date.now() - cache.fetchedAt < CACHE_DURATION_MS)
 }
 
-function apiHeaders() {
-  const isRapidAPI = process.env.APIFOOTBALL_HOST?.includes('rapidapi.com')
-  return isRapidAPI
-    ? { 'x-rapidapi-key': process.env.APIFOOTBALL_KEY, 'x-rapidapi-host': process.env.APIFOOTBALL_HOST }
-    : { 'x-apisports-key': process.env.APIFOOTBALL_KEY }
-}
-
 // Upsert live match summary into MatchSnapshot — indexed by team name for analytics
 async function saveToSnapshots(matches) {
   await Promise.all(matches.map(m =>
@@ -68,15 +61,7 @@ async function saveToSnapshots(matches) {
 }
 
 async function fetchFromAPI() {
-  const res = await fetch(
-    `https://${process.env.APIFOOTBALL_HOST}/fixtures?live=all`,
-    { headers: apiHeaders() }
-  )
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`API-Football ${res.status}: ${body.slice(0, 120)}`)
-  }
-  const json = await res.json()
+  const json = await apiFetch('/fixtures?live=all')
   return json.response
     .filter(f => LEAGUE_IDS.includes(f.league.id))
     .map(f => ({

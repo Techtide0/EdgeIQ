@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   ArrowLeft, RefreshCw, Bell, BellOff,
@@ -463,7 +463,7 @@ function MiniStatCard({ label, value, sub, color }) {
 }
 
 // 5. H2H Analysis
-function H2HCard({ h2h }) {
+function H2HCard({ h2h, teamA, teamB }) {
   const patternColor = {
     'High-scoring and aggressive': '#ef4444',
     'High-scoring fixture':        '#f97316',
@@ -490,6 +490,13 @@ function H2HCard({ h2h }) {
     },
   ]
 
+  // Wins breakdown bar
+  const totalH2H  = (h2h.teamAWins ?? 0) + (h2h.teamBWins ?? 0) + (h2h.draws ?? 0)
+  const hasWinData = totalH2H > 0
+  const aWinPct    = hasWinData ? Math.round((h2h.teamAWins / totalH2H) * 100) : null
+  const bWinPct    = hasWinData ? Math.round((h2h.teamBWins / totalH2H) * 100) : null
+  const drawPct    = hasWinData ? Math.max(0, 100 - aWinPct - bWinPct) : null
+
   return (
     <div className="card p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -501,6 +508,38 @@ function H2HCard({ h2h }) {
           Last {h2h.matchCount}
         </span>
       </div>
+
+      {/* Wins bar */}
+      {hasWinData && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
+            <motion.div initial={{ width: 0 }} animate={{ width: `${aWinPct}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              style={{ background: 'var(--accent)' }} />
+            <motion.div initial={{ width: 0 }} animate={{ width: `${drawPct}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.1 }}
+              style={{ background: 'rgba(255,255,255,0.25)' }} />
+            <motion.div initial={{ width: 0 }} animate={{ width: `${bWinPct}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+              style={{ background: 'var(--info)' }} />
+          </div>
+          <div className="grid grid-cols-3 text-center">
+            <div>
+              <span className="text-xs font-black" style={{ color: 'var(--accent)' }}>{h2h.teamAWins}W</span>
+              <span className="block text-[9px]" style={{ color: 'var(--text-muted)' }}>{teamA?.split(' ')[0]}</span>
+            </div>
+            <div>
+              <span className="text-xs font-black" style={{ color: 'var(--text-muted)' }}>{h2h.draws}D</span>
+              <span className="block text-[9px]" style={{ color: 'var(--text-muted)' }}>Draw</span>
+            </div>
+            <div>
+              <span className="text-xs font-black" style={{ color: 'var(--info)' }}>{h2h.teamBWins}W</span>
+              <span className="block text-[9px]" style={{ color: 'var(--text-muted)' }}>{teamB?.split(' ')[0]}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-2">
         {stats.map((s, i) => (
           <div key={i} className="flex flex-col gap-1 p-2.5 rounded-lg" style={{ background: 'var(--surface2)' }}>
@@ -593,6 +632,138 @@ function MarketsGrid({ markets }) {
 
 
 
+// Recent Form card
+function FormCard({ form }) {
+  if (!form) return null
+  const formA = (form.teamA || '').slice(-5).split('')
+  const formB = (form.teamB || '').slice(-5).split('')
+  if (!formA.length && !formB.length) return null
+
+  const letterStyle = (l) => ({
+    W: { bg: 'rgba(34,197,94,0.2)',  color: '#22c55e', label: 'W' },
+    D: { bg: 'rgba(251,191,36,0.2)', color: '#fbbf24', label: 'D' },
+    L: { bg: 'rgba(239,68,68,0.2)',  color: '#ef4444', label: 'L' },
+  }[l] || { bg: 'var(--surface2)', color: 'var(--text-muted)', label: l })
+
+  const FormRow = ({ name, letters }) => (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] font-bold w-24 truncate shrink-0" style={{ color: 'var(--text-muted)' }}>{name}</span>
+      <div className="flex gap-1.5">
+        {letters.map((l, i) => {
+          const s = letterStyle(l)
+          return (
+            <div key={i} className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black"
+              style={{ background: s.bg, color: s.color }}>{s.label}</div>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="card p-4 flex flex-col gap-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        Recent Form (Last 5)
+      </p>
+      <div className="flex flex-col gap-2.5">
+        <FormRow name={form.teamAName} letters={formA} />
+        <FormRow name={form.teamBName} letters={formB} />
+      </div>
+    </div>
+  )
+}
+
+// Home vs Away Strength card
+function TeamStrengthCard({ strength, teamA, teamB }) {
+  if (!strength) return null
+  const a = strength.teamA
+  const b = strength.teamB
+  if (!a || !b) return null
+
+  const Row = ({ label, valA, valB, highlight, suffix = '' }) => {
+    const aNum = parseFloat(valA)
+    const bNum = parseFloat(valB)
+    const aWins = aNum > bNum
+    const bWins = bNum > aNum
+    return (
+      <div className="grid grid-cols-3 gap-2 items-center py-1.5"
+        style={{ borderBottom: '1px solid var(--border)' }}>
+        <span className={`text-sm font-bold text-right tabular-nums ${aWins && highlight ? '' : ''}`}
+          style={{ color: aWins && highlight ? 'var(--accent)' : 'var(--text)' }}>
+          {valA}{suffix}
+        </span>
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-center"
+          style={{ color: 'var(--text-muted)' }}>{label}</span>
+        <span className={`text-sm font-bold tabular-nums`}
+          style={{ color: bWins && highlight ? 'var(--info)' : 'var(--text)' }}>
+          {valB}{suffix}
+        </span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card p-4 flex flex-col gap-2">
+      <div className="grid grid-cols-3 gap-2 items-center mb-1">
+        <span className="text-[10px] font-bold text-right truncate" style={{ color: 'var(--accent)' }}>{teamA} (H)</span>
+        <span className="text-[9px] font-semibold uppercase tracking-wider text-center" style={{ color: 'var(--text-muted)' }}>vs</span>
+        <span className="text-[10px] font-bold truncate" style={{ color: 'var(--info)' }}>{teamB} (A)</span>
+      </div>
+      <Row label="Win Rate"   valA={`${a.homeWinRate}%`}  valB={`${b.awayWinRate}%`}  highlight />
+      <Row label="Avg Goals"  valA={a.avgGoals.toFixed(1)} valB={b.avgGoals.toFixed(1)} highlight />
+      <Row label="Conceded"   valA={a.avgConceded.toFixed(1)} valB={b.avgConceded.toFixed(1)} />
+      <Row label="Clean Sheet" valA={`${a.csRate}%`} valB={`${b.csRate}%`} highlight />
+      {strength.estimatedCornersA != null && (
+        <Row label="Est. Corners" valA={strength.estimatedCornersA.toFixed(1)} valB={strength.estimatedCornersB.toFixed(1)} highlight />
+      )}
+      {strength.estimatedCorners != null && (
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+            Total corners (est.)
+          </span>
+          <span className="text-sm font-black" style={{ color: 'var(--accent)' }}>
+            ~{strength.estimatedCorners}
+          </span>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// First half winner card
+function FirstHalfWinnerCard({ firstHalfWinner, teamA, teamB }) {
+  if (!firstHalfWinner) return null
+  const { home, draw, away } = firstHalfWinner
+  const sections = [
+    { label: teamA, value: home, color: 'var(--accent)' },
+    { label: 'No Goal / Draw', value: draw, color: 'rgba(255,255,255,0.3)' },
+    { label: teamB, value: away, color: 'var(--info)' },
+  ]
+  return (
+    <div className="card p-4 flex flex-col gap-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        First Half Winner
+      </p>
+      <div className="flex h-2.5 rounded-full overflow-hidden gap-0.5">
+        {sections.map((s, i) => (
+          <motion.div key={i}
+            initial={{ width: 0 }} animate={{ width: `${s.value}%` }}
+            transition={{ duration: 0.9, ease: 'easeOut', delay: i * 0.1 }}
+            style={{ background: s.color }} />
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-1 text-center">
+        {sections.map((s, i) => (
+          <div key={i} className="flex flex-col gap-0.5">
+            <span className="text-sm font-black tabular-nums" style={{ color: s.color }}>{s.value}%</span>
+            <span className="text-[10px] leading-tight truncate" style={{ color: 'var(--text-muted)' }}>{s.label}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function InsightsTab({ matchId, getToken }) {
   const [insight, setInsight]   = useState(null)
   const [loading, setLoading]   = useState(true)
@@ -631,7 +802,7 @@ function InsightsTab({ matchId, getToken }) {
 
   if (!insight) return null
 
-  const { outcome, goalProbs, bttsProb, firstHalfGoal, scoreRange, h2h, valueBet, upsetAlert, risk } = insight
+  const { outcome, goalProbs, bttsProb, firstHalfGoal, firstHalfWinner, scoreRange, h2h, form, strength, valueBet, upsetAlert, risk } = insight
 
   // Map score range pick to its percentage
   const scoreRangePct = scoreRange
@@ -651,7 +822,7 @@ function InsightsTab({ matchId, getToken }) {
       {/* 3. Goals Market */}
       {goalProbs && <GoalsCard goalProbs={goalProbs} />}
 
-      {/* 4. Mini stats row */}
+      {/* 4. Mini stats row — BTTS / Score Range / 1H Over 0.5 */}
       <div className="grid grid-cols-3 gap-3">
         {bttsProb != null && (
           <MiniStatCard
@@ -669,19 +840,32 @@ function InsightsTab({ matchId, getToken }) {
         )}
       </div>
 
-      {/* 5. H2H */}
-      {h2h && h2h.matchCount >= 3 && <H2HCard h2h={h2h} />}
+      {/* 5. First Half Winner */}
+      {firstHalfWinner && (
+        <FirstHalfWinnerCard firstHalfWinner={firstHalfWinner} teamA={insight.teamA} teamB={insight.teamB} />
+      )}
 
-      {/* 6. Value Bet */}
+      {/* 6. Recent Form */}
+      {form && (form.teamA || form.teamB) && <FormCard form={form} />}
+
+      {/* 7. Home vs Away Strength */}
+      {strength && (
+        <TeamStrengthCard strength={strength} teamA={insight.teamA} teamB={insight.teamB} />
+      )}
+
+      {/* 8. H2H */}
+      {h2h && h2h.matchCount >= 3 && <H2HCard h2h={h2h} teamA={insight.teamA} teamB={insight.teamB} />}
+
+      {/* 9. Value Bet */}
       {valueBet && <ValueBetCard valueBet={valueBet} />}
 
-      {/* 7. Upset Alert */}
+      {/* 10. Upset Alert */}
       {upsetAlert && <UpsetAlertCard upsetAlert={upsetAlert} />}
 
-      {/* 8. Confidence & Risk */}
+      {/* 11. Confidence & Risk */}
       <RiskCard confidence={insight.confidence} risk={risk || 'medium'} />
 
-      {/* 9. Markets Grid */}
+      {/* 12. Markets Grid */}
       {insight.markets && <MarketsGrid markets={insight.markets} />}
 
       {/* 10. Reasoning */}
@@ -700,205 +884,6 @@ function InsightsTab({ matchId, getToken }) {
         </div>
       )}
 
-    </div>
-  )
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tab: Standings  (proxied through our server → API-Football /standings)
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Derive season start year from a match date (season starts in July/Aug)
-function matchSeason(isoDate) {
-  const d = new Date(isoDate || Date.now())
-  return d.getMonth() >= 6 ? d.getFullYear() : d.getFullYear() - 1
-}
-
-function nameMatch(a = '', b = '') {
-  a = a.toLowerCase(); b = b.toLowerCase()
-  return a.includes(b.split(' ')[0]) || b.includes(a.split(' ')[0])
-}
-
-function fmtGD(n) {
-  if (n == null) return '—'
-  return n > 0 ? `+${n}` : String(n)
-}
-
-// Derive zone color from API-Football description string
-function zoneColor(description = '') {
-  const d = description.toLowerCase()
-  if (d.includes('champions league'))              return '#3b82f6'  // blue
-  if (d.includes('europa league') &&
-      !d.includes('conference'))                   return '#f97316'  // orange
-  if (d.includes('conference league') ||
-      d.includes('conference'))                    return '#a78bfa'  // purple
-  if (d.includes('world cup') ||
-      d.includes('promotion playoff') ||
-      d.includes('promotion'))                     return '#22c55e'  // green
-  if (d.includes('relegation playoff'))            return '#fb923c'  // amber
-  if (d.includes('relegation'))                    return '#ef4444'  // red
-  return null
-}
-
-function StandingsTab({ leagueId, startTime, homeTeamName, awayTeamName }) {
-  const { getToken }      = useAuth()
-  const [rows, setRows]   = useState(null)
-  const [meta, setMeta]   = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const fetched = useRef(false)
-
-  const season = useMemo(() => matchSeason(startTime), [startTime])
-
-  useEffect(() => {
-    if (fetched.current || !leagueId) return
-    fetched.current = true
-
-    apiFetch(`/api/matches/${leagueId}/standings?season=${season}`, getToken)
-      .then(json => {
-        if (json.standings?.length) {
-          setRows(json.standings)
-          setMeta({ name: json.name, season: json.season })
-        } else {
-          setError('No standings data available')
-        }
-      })
-      .catch(() => setError('Could not load standings'))
-      .finally(() => setLoading(false))
-  }, [leagueId, season]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (loading) return (
-    <div className="card p-4 flex flex-col gap-2">
-      {Array.from({ length: 10 }).map((_, i) => (
-        <SkeletonBar key={i} width="100%" height={32} rounded="rounded-lg" delay={i * 0.04} />
-      ))}
-    </div>
-  )
-
-  if (error) return (
-    <div className="card p-8 text-center">
-      <p className="text-sm font-medium" style={{ color: 'var(--text)' }}>Standings unavailable</p>
-      <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{error}</p>
-    </div>
-  )
-
-  // Collect zone legend from descriptions
-  const legend = {}
-  rows.forEach(r => {
-    const color = zoneColor(r.description)
-    if (color && r.description && !legend[color]) {
-      // Shorten description for display
-      const d = r.description.replace(/\s*\(.*\)/, '').trim()
-      legend[color] = d
-    }
-  })
-
-  return (
-    <div className="flex flex-col gap-3">
-      {/* Header */}
-      <div className="flex items-center justify-between px-1">
-        <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{meta?.name}</p>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{meta?.season}/{String(meta?.season + 1).slice(2)}</p>
-      </div>
-
-      {/* Table */}
-      <div className="card overflow-hidden">
-        {/* Column headers */}
-        <div className="flex items-center px-3 py-2 text-[10px] font-bold uppercase tracking-wider"
-          style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-          <span className="w-7 shrink-0">#</span>
-          <span className="flex-1">Club</span>
-          <span className="w-7 text-center shrink-0">P</span>
-          <span className="w-7 text-center shrink-0">W</span>
-          <span className="w-7 text-center shrink-0">D</span>
-          <span className="w-7 text-center shrink-0">L</span>
-          <span className="w-9 text-center shrink-0">GD</span>
-          <span className="w-9 text-center shrink-0 font-black" style={{ color: 'var(--text)' }}>Pts</span>
-        </div>
-
-        {/* Rows */}
-        {rows.map((entry, i) => {
-          const isHome    = nameMatch(entry.team?.name, homeTeamName)
-          const isAway    = nameMatch(entry.team?.name, awayTeamName)
-          const highlight = isHome || isAway
-          const color     = zoneColor(entry.description)
-          const all       = entry.all || {}
-          const gd        = entry.goalsDiff
-
-          return (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: i * 0.025 }}
-              className="flex items-center px-3 py-2.5 relative"
-              style={{
-                borderBottom: i < rows.length - 1 ? '1px solid var(--border)' : 'none',
-                background: highlight ? 'var(--accent-dim)' : 'transparent',
-              }}>
-              {/* Zone color bar */}
-              {color && (
-                <div className="absolute left-0 top-0 bottom-0 w-0.75 rounded-r-full"
-                  style={{ background: color }} />
-              )}
-
-              {/* Position */}
-              <span className="w-7 text-xs font-bold tabular-nums shrink-0 pl-1"
-                style={{ color: highlight ? 'var(--accent)' : 'var(--text-muted)' }}>
-                {entry.rank}
-              </span>
-
-              {/* Team */}
-              <div className="flex-1 flex items-center gap-2 min-w-0">
-                {entry.team?.logo
-                  ? <img src={entry.team.logo} alt="" className="w-5 h-5 object-contain shrink-0" />
-                  : <div className="w-5 h-5 rounded-full shrink-0" style={{ background: 'var(--surface2)' }} />
-                }
-                <span className="text-xs font-semibold truncate"
-                  style={{ color: highlight ? 'var(--accent)' : 'var(--text)' }}>
-                  {entry.team?.name}
-                </span>
-                {(isHome || isAway) && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
-                    style={{ background: 'var(--accent)', color: '#fff' }}>
-                    {isHome ? 'H' : 'A'}
-                  </span>
-                )}
-              </div>
-
-              {/* Stats */}
-              <span className="w-7 text-[11px] text-center tabular-nums shrink-0"
-                style={{ color: 'var(--text-muted)' }}>{all.played ?? '—'}</span>
-              <span className="w-7 text-[11px] text-center tabular-nums font-medium shrink-0"
-                style={{ color: 'var(--text)' }}>{all.win ?? '—'}</span>
-              <span className="w-7 text-[11px] text-center tabular-nums shrink-0"
-                style={{ color: 'var(--text-muted)' }}>{all.draw ?? '—'}</span>
-              <span className="w-7 text-[11px] text-center tabular-nums shrink-0"
-                style={{ color: 'var(--text-muted)' }}>{all.lose ?? '—'}</span>
-              <span className="w-9 text-[11px] text-center tabular-nums font-medium shrink-0"
-                style={{ color: gd >= 0 ? 'var(--accent)' : 'var(--danger)' }}>
-                {fmtGD(gd)}
-              </span>
-              <span className="w-9 text-[11px] text-center tabular-nums font-black shrink-0"
-                style={{ color: highlight ? 'var(--accent)' : 'var(--text)' }}>
-                {entry.points ?? '—'}
-              </span>
-            </motion.div>
-          )
-        })}
-      </div>
-
-      {/* Zone legend */}
-      {Object.keys(legend).length > 0 && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1">
-          {Object.entries(legend).map(([color, desc]) => (
-            <div key={color} className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: color }} />
-              <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{desc}</span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   )
 }
@@ -956,7 +941,7 @@ function NotificationBell({ matchId, getToken }) {
 // Main page
 // ─────────────────────────────────────────────────────────────────────────────
 
-const TABS = ['Details', 'Odds', 'Lineups', 'Statistics', 'AI Insights', 'Standings']
+const TABS = ['Details', 'Odds', 'Lineups', 'Statistics', 'AI Insights']
 const LIVE = new Set(['1H', '2H', 'HT', 'ET', 'BT', 'P', 'INT', 'LIVE'])
 
 export default function MatchDetail({ matchId, onBack, defaultTab }) {
@@ -1118,7 +1103,6 @@ export default function MatchDetail({ matchId, onBack, defaultTab }) {
           {tab === 'Lineups'    && <LineupsTab   lineups={data?.lineups}     homeTeam={data?.homeTeam} awayTeam={data?.awayTeam} />}
           {tab === 'Statistics' && <StatisticsTab statistics={data?.statistics} homeTeam={data?.homeTeam} awayTeam={data?.awayTeam} />}
           {tab === 'AI Insights'&& <InsightsTab  matchId={matchId}           getToken={getToken} />}
-          {tab === 'Standings'  && <StandingsTab leagueId={data?.league?.id} startTime={data?.startTime} homeTeamName={data?.homeTeam?.name} awayTeamName={data?.awayTeam?.name} />}
 
         </motion.div>
       </AnimatePresence>

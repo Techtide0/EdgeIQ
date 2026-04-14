@@ -1,7 +1,61 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, TrendingUp, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+
+const LOGO_SLIDES = ['/edge-removebg-preview.png', '/edge.png']
+
+function LogoSlider() {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => setIndex(i => (i + 1) % LOGO_SLIDES.length), 3200)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div className="relative mx-auto mb-2" style={{ width: 148, height: 148 }}>
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={index}
+          src={LOGO_SLIDES[index]}
+          alt="EdgeIQ logo"
+          initial={{ opacity: 0, scale: 0.92, y: 10 }}
+          animate={{ opacity: 1, scale: 1,    y: 0  }}
+          exit={{    opacity: 0, scale: 1.06,  y: -10 }}
+          transition={{ duration: 0.55, ease: 'easeInOut' }}
+          style={{
+            position: 'absolute', inset: 0,
+            width: '100%', height: '100%',
+            objectFit: 'contain', borderRadius: 20,
+          }}
+        />
+      </AnimatePresence>
+
+      {/* Dot indicators */}
+      <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+        {LOGO_SLIDES.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setIndex(i)}
+            aria-label={`Logo slide ${i + 1}`}
+            style={{
+              width: i === index ? 16 : 6,
+              height: 6,
+              borderRadius: 3,
+              border: 'none',
+              cursor: 'pointer',
+              background: i === index ? 'var(--accent)' : 'var(--border)',
+              transition: 'width 0.3s ease, background 0.3s ease',
+              padding: 0,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function Auth() {
   const { register, login, loginWithGoogle } = useAuth()
@@ -38,13 +92,9 @@ export default function Auth() {
         className="card w-full max-w-sm overflow-hidden">
 
         {/* Brand strip */}
-        <div className="px-7 pt-8 pb-6 text-center">
-          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'linear-gradient(135deg, var(--accent), var(--info))' }}>
-            <TrendingUp size={22} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: 'var(--text)' }}>EdgeIQ</h1>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+        <div className="px-7 pt-8 pb-7 text-center">
+          <LogoSlider />
+          <p className="text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
             {mode === 'login' ? 'Welcome back' : 'Create your account'}
           </p>
         </div>

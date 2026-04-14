@@ -24,7 +24,14 @@ const AnalysisSchema = new Schema({
   scoreRange:    Schema.Types.Mixed,   // { low, medium, high, pick }
 
   // ── Head-to-Head ────────────────────────────────────────────────────────
-  h2h:        Schema.Types.Mixed,      // { matchCount, avgGoals, over25Rate, bttsRate, avgCards, pattern }
+  h2h:        Schema.Types.Mixed,      // { matchCount, avgGoals, over25Rate, bttsRate, avgCards, teamAWins, teamBWins, draws, pattern }
+
+  // ── Team form & strength ─────────────────────────────────────────────────
+  form:     Schema.Types.Mixed,        // { teamA, teamB, teamAName, teamBName }
+  strength: Schema.Types.Mixed,        // { teamA: { homeWinRate, avgGoals, avgConceded, csRate }, teamB: { awayWinRate, ... } }
+
+  // ── First half winner ────────────────────────────────────────────────────
+  firstHalfWinner: Schema.Types.Mixed, // { home, draw, away } as 0–100 integers
 
   // ── Value / risk signals ─────────────────────────────────────────────────
   valueBet:   Schema.Types.Mixed,      // { market, description } | null

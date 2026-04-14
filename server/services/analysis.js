@@ -151,15 +151,26 @@ async function fetchH2H(teamAId, teamBId) {
 
     const fixtures = json.response || []
     const count    = fixtures.length
-    if (count === 0) return { matchCount: 0, avgGoals: 0, over25Rate: 0, bttsRate: 0 }
+    if (count === 0) return { matchCount: 0, avgGoals: 0, over25Rate: 0, bttsRate: 0, teamAWins: 0, teamBWins: 0, draws: 0 }
 
+    const tAId = Number(teamAId)
     let totalGoals = 0, over25Count = 0, bttsCount = 0
+    let teamAWins = 0, teamBWins = 0, draws = 0
     for (const f of fixtures) {
       const home = f.goals?.home ?? 0
       const away = f.goals?.away ?? 0
       totalGoals += home + away
       if ((home + away) >= 3) over25Count++ // 3+ = over 2.5
       if (home > 0 && away > 0) bttsCount++
+      // Track which team won
+      const homeTeamId = f.teams?.home?.id
+      if (home > away) {
+        if (homeTeamId === tAId) teamAWins++; else teamBWins++
+      } else if (away > home) {
+        if (homeTeamId === tAId) teamBWins++; else teamAWins++
+      } else {
+        draws++
+      }
     }
 
     const stats = {
@@ -168,6 +179,9 @@ async function fetchH2H(teamAId, teamBId) {
       avgGoals:   parseFloat((totalGoals / count).toFixed(2)),
       over25Rate: parseFloat((over25Count / count).toFixed(2)),
       bttsRate:   parseFloat((bttsCount   / count).toFixed(2)),
+      teamAWins,
+      teamBWins,
+      draws,
       fetchedAt:  new Date(),
       expiresAt:  new Date(Date.now() + 24 * 60 * 60 * 1000),
     }
@@ -202,6 +216,13 @@ function computeInsight(teamA, teamB, tableRowA, tableRowB, statsA, statsB, h2h)
   const winRateB   = t.b.w / t.b.p
   const formPtsA   = formPoints(formA)
   const formPtsB   = formPoints(formB)
+  // Home / Away split (teamA is home, teamB is away)
+  const homeWinRateA  = statsA?.homeWinRate          ?? (winRateA * 100)
+  const awayWinRateB  = statsB?.awayWinRate          ?? (winRateB * 100)
+  const homeAvgGoalsA = statsA?.avgGoalsScoredHome   ?? avgGoalsA
+  const awayAvgGoalsB = statsB?.avgGoalsScoredAway   ?? avgGoalsB
+  const homeAvgConcA  = statsA?.avgGoalsConcededHome ?? avgConcA
+  const awayAvgConcB  = statsB?.avgGoalsConcededAway ?? avgConcB
 
   // Expected goals per match (home, away)
   const lambdaA        = (avgGoalsA + avgConcB) / 2
@@ -289,6 +310,22 @@ function computeInsight(teamA, teamB, tableRowA, tableRowB, statsA, statsB, h2h)
   else if (csRateB >= 35 && avgGoalsA < 1.2) { csPick = `${teamB} Clean Sheet`; csConf = 62 }
   else                                        { csPick = 'No Clean Sheet';      csConf = 55 }
 
+  // ── First Half Winner ─────────────────────────────────────────────────────
+  const firstHalfHome = Math.round(outcome.home * 0.55)
+  const firstHalfAway = Math.round(outcome.away * 0.55)
+  const firstHalfWinner = {
+    home: firstHalfHome,
+    draw: Math.max(0, 100 - firstHalfHome - firstHalfAway),
+    away: firstHalfAway,
+  }
+
+  // ── Estimated Corners (goals-based proxy) ─────────────────────────────────
+  // ~4 corners per goal scored is a standard approximation
+  const estimatedCornersA = parseFloat((homeAvgGoalsA * 4.2 + 1.5).toFixed(1))
+  const estimatedCornersB = parseFloat((awayAvgGoalsB * 4.2 + 1.5).toFixed(1))
+  const estimatedCorners  = parseFloat((estimatedCornersA + estimatedCornersB).toFixed(1))
+  const cornersOver95     = Math.round(Math.min(90, Math.max(20, (estimatedCorners - 7) * 12)))
+
   // ── H2H Insight ───────────────────────────────────────────────────────────
   let h2hInsight = null
   if (h2h && h2h.matchCount >= 3) {
@@ -306,6 +343,9 @@ function computeInsight(teamA, teamB, tableRowA, tableRowB, statsA, statsB, h2h)
       over25Rate: h2h.over25Rate,
       bttsRate:   h2h.bttsRate,
       avgCards:   parseFloat(combinedCards.toFixed(1)),
+      teamAWins:  h2h.teamAWins ?? 0,
+      teamBWins:  h2h.teamBWins ?? 0,
+      draws:      h2h.draws     ?? 0,
       pattern,
     }
   }
@@ -376,6 +416,12 @@ function computeInsight(teamA, teamB, tableRowA, tableRowB, statsA, statsB, h2h)
   if (avgConcB > 1.5) reasoning.push(`${teamB} leaky defence — ${avgConcB.toFixed(1)} conceded/game`)
   if (h2hInsight)     reasoning.push(`H2H last ${h2hInsight.matchCount}: avg ${h2hInsight.avgGoals} goals, ${Math.round(h2hInsight.over25Rate * 100)}% over 2.5`)
 
+  // ── Corners market (estimated) ────────────────────────────────────────────
+  const cornersLine = estimatedCorners >= 10.5 ? 'Over 9.5 Corners'
+    : estimatedCorners >= 9.0 ? 'Over 8.5 Corners' : 'Under 9.5 Corners'
+  const cornersConf = estimatedCorners >= 10.5 ? cornersOver95
+    : estimatedCorners >= 9.0 ? Math.max(50, cornersOver95 - 10) : Math.max(50, 80 - cornersOver95)
+
   return {
     prediction:    primary.pick,
     confidence:    primary.confidence,
@@ -384,19 +430,45 @@ function computeInsight(teamA, teamB, tableRowA, tableRowB, statsA, statsB, h2h)
     goalProbs:     { over15: over15Prob, over25: over25Prob, over35: over35Prob },
     bttsProb,
     firstHalfGoal,
+    firstHalfWinner,
     scoreRange:    { low: scoreLow, medium: scoreMedium, high: scoreHigh, pick: scoreRangePick },
     h2h:           h2hInsight,
     valueBet,
     upsetAlert,
     risk,
+    form: {
+      teamAName: teamA,
+      teamBName: teamB,
+      teamA:     formA || '',
+      teamB:     formB || '',
+    },
+    strength: {
+      teamA: {
+        homeWinRate:   parseFloat(homeWinRateA.toFixed(1)),
+        avgGoals:      parseFloat(homeAvgGoalsA.toFixed(2)),
+        avgConceded:   parseFloat(homeAvgConcA.toFixed(2)),
+        csRate:        parseFloat(csRateA.toFixed(1)),
+        failedToScore: parseFloat((statsA?.failedToScoreRate ?? 0).toFixed(1)),
+      },
+      teamB: {
+        awayWinRate:   parseFloat(awayWinRateB.toFixed(1)),
+        avgGoals:      parseFloat(awayAvgGoalsB.toFixed(2)),
+        avgConceded:   parseFloat(awayAvgConcB.toFixed(2)),
+        csRate:        parseFloat(csRateB.toFixed(1)),
+        failedToScore: parseFloat((statsB?.failedToScoreRate ?? 0).toFixed(1)),
+      },
+      estimatedCorners,
+      estimatedCornersA,
+      estimatedCornersB,
+    },
     markets: {
-      result:       { pick: resultPick,             confidence: resultConf },
-      doubleChance: { pick: dcPick,                 confidence: dcConf     },
-      goals:        { pick: goalsPick,              confidence: goalsConf  },
-      btts:         { pick: bttsPick,               confidence: bttsConf   },
-      cards:        { pick: cardsPick,              confidence: cardsConf  },
-      cleanSheet:   { pick: csPick,                 confidence: csConf     },
-      corners:      { pick: 'Data unavailable',     confidence: 0          },
+      result:       { pick: resultPick,   confidence: resultConf },
+      doubleChance: { pick: dcPick,       confidence: dcConf     },
+      goals:        { pick: goalsPick,    confidence: goalsConf  },
+      btts:         { pick: bttsPick,     confidence: bttsConf   },
+      cards:        { pick: cardsPick,    confidence: cardsConf  },
+      cleanSheet:   { pick: csPick,       confidence: csConf     },
+      corners:      { pick: cornersLine,  confidence: cornersConf },
     },
   }
 }
@@ -434,22 +506,25 @@ async function computeAndSave(match) {
   )
 
   return {
-    prediction:    insight.prediction,
-    confidence:    insight.confidence,
-    reasoning:     insight.reasoning,
-    markets:       insight.markets,
-    outcome:       insight.outcome,
-    goalProbs:     insight.goalProbs,
-    bttsProb:      insight.bttsProb,
-    firstHalfGoal: insight.firstHalfGoal,
-    scoreRange:    insight.scoreRange,
-    h2h:           insight.h2h,
-    valueBet:      insight.valueBet,
-    upsetAlert:    insight.upsetAlert,
-    risk:          insight.risk,
-    teamA:         match.teamA,
-    teamB:         match.teamB,
-    ageMinutes:    0,
+    prediction:      insight.prediction,
+    confidence:      insight.confidence,
+    reasoning:       insight.reasoning,
+    markets:         insight.markets,
+    outcome:         insight.outcome,
+    goalProbs:       insight.goalProbs,
+    bttsProb:        insight.bttsProb,
+    firstHalfGoal:   insight.firstHalfGoal,
+    firstHalfWinner: insight.firstHalfWinner,
+    scoreRange:      insight.scoreRange,
+    h2h:             insight.h2h,
+    form:            insight.form,
+    strength:        insight.strength,
+    valueBet:        insight.valueBet,
+    upsetAlert:      insight.upsetAlert,
+    risk:            insight.risk,
+    teamA:           match.teamA,
+    teamB:           match.teamB,
+    ageMinutes:      0,
   }
 }
 
@@ -497,22 +572,25 @@ async function getAnalysis(matchId) {
   const doc = await Analysis.findOne({ matchId: String(matchId) })
   if (!doc) return null
   return {
-    prediction:    doc.prediction,
-    confidence:    doc.confidence,
-    reasoning:     doc.reasoning,
-    markets:       doc.markets,
-    outcome:       doc.outcome,
-    goalProbs:     doc.goalProbs,
-    bttsProb:      doc.bttsProb,
-    firstHalfGoal: doc.firstHalfGoal,
-    scoreRange:    doc.scoreRange,
-    h2h:           doc.h2h,
-    valueBet:      doc.valueBet,
-    upsetAlert:    doc.upsetAlert,
-    risk:          doc.risk,
-    teamA:         doc.teamA,
-    teamB:         doc.teamB,
-    ageMinutes:    Math.floor((Date.now() - doc.generatedAt) / 60000),
+    prediction:      doc.prediction,
+    confidence:      doc.confidence,
+    reasoning:       doc.reasoning,
+    markets:         doc.markets,
+    outcome:         doc.outcome,
+    goalProbs:       doc.goalProbs,
+    bttsProb:        doc.bttsProb,
+    firstHalfGoal:   doc.firstHalfGoal,
+    firstHalfWinner: doc.firstHalfWinner,
+    scoreRange:      doc.scoreRange,
+    h2h:             doc.h2h,
+    form:            doc.form,
+    strength:        doc.strength,
+    valueBet:        doc.valueBet,
+    upsetAlert:      doc.upsetAlert,
+    risk:            doc.risk,
+    teamA:           doc.teamA,
+    teamB:           doc.teamB,
+    ageMinutes:      Math.floor((Date.now() - doc.generatedAt) / 60000),
   }
 }
 

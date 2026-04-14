@@ -1,4 +1,4 @@
-const fetch         = require('node-fetch')
+const { apiFetch }  = require('../config/apiClient')
 const MatchSnapshot = require('../models/MatchSnapshot')
 
 const FINALIZED     = new Set(['FT', 'AET', 'PEN', 'AWD', 'WO'])
@@ -9,21 +9,8 @@ const TTL_LIVE_MS    = 5  * 60 * 1000   // 5 min  — live score/events
 const TTL_PREMATCH_MS = 60 * 60 * 1000  // 1 h    — NS match (only status changes)
 const TTL_OTHER_MS   = 30 * 60 * 1000   // 30 min — postponed / unknown
 
-function apiHeaders() {
-  const isRapidAPI = process.env.APIFOOTBALL_HOST?.includes('rapidapi.com')
-  return isRapidAPI
-    ? { 'x-rapidapi-key': process.env.APIFOOTBALL_KEY, 'x-rapidapi-host': process.env.APIFOOTBALL_HOST }
-    : { 'x-apisports-key': process.env.APIFOOTBALL_KEY }
-}
-
-async function apiFetch(path) {
-  const url = `https://${process.env.APIFOOTBALL_HOST}${path}`
-  const res = await fetch(url, { headers: apiHeaders() })
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`API-Football ${res.status} ${path}: ${body.slice(0, 80)}`)
-  }
-  const json = await res.json()
+async function apiFetchResponse(path) {
+  const json = await apiFetch(path)
   return json.response || []
 }
 
@@ -41,21 +28,21 @@ async function fetchAndSave(matchId, existingDoc) {
   // For NS matches we only need the fixture (to detect kickoff / status change).
   // Skip events & stats — they're always empty pre-match.
   const [fixtures, lineups, events, statistics] = await Promise.all([
-    apiFetch(`/fixtures?id=${id}`),
+    apiFetchResponse(`/fixtures?id=${id}`),
 
     // Lineups: fetch only if not cached
     hasLineups
       ? Promise.resolve(existingDoc.lineups)
-      : apiFetch(`/fixtures/lineups?fixture=${id}`).catch(() => []),
+      : apiFetchResponse(`/fixtures/lineups?fixture=${id}`).catch(() => []),
 
     // Events & stats: skip entirely for pre-match (saves 2 calls)
     isPreMatch
       ? Promise.resolve(existingDoc?.events || [])
-      : apiFetch(`/fixtures/events?fixture=${id}`).catch(() => []),
+      : apiFetchResponse(`/fixtures/events?fixture=${id}`).catch(() => []),
 
     isPreMatch
       ? Promise.resolve(existingDoc?.statistics || [])
-      : apiFetch(`/fixtures/statistics?fixture=${id}`).catch(() => []),
+      : apiFetchResponse(`/fixtures/statistics?fixture=${id}`).catch(() => []),
   ])
 
   const f = fixtures[0]

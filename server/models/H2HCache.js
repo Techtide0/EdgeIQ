@@ -6,6 +6,9 @@ const schema = new mongoose.Schema({
   avgGoals:   { type: Number, default: 0 },
   over25Rate: { type: Number, default: 0 }, // fraction 0–1
   bttsRate:   { type: Number, default: 0 }, // fraction 0–1
+  teamAWins:  { type: Number, default: 0 },
+  teamBWins:  { type: Number, default: 0 },
+  draws:      { type: Number, default: 0 },
   fetchedAt:  Date,
   expiresAt:  Date,
 })

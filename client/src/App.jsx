@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion' // eslint-disable-line no-unused-vars
 import { useAuth } from './hooks/useAuth'
 import { useBets } from './hooks/useBets'
+import { useInstallPrompt } from './hooks/useInstallPrompt'
 
-import Sidebar     from './components/layout/Sidebar'
-import TopBar      from './components/layout/TopBar'
-import BottomNav   from './components/layout/BottomNav'
+import Sidebar       from './components/layout/Sidebar'
+import TopBar        from './components/layout/TopBar'
+import BottomNav     from './components/layout/BottomNav'
+import InstallBanner from './components/InstallBanner'
 
 import Auth        from './pages/Auth'
 import Dashboard   from './pages/Dashboard'
@@ -24,6 +26,30 @@ function Shell() {
   const [activeMatchTab, setActiveMatchTab] = useState(null)
   const { bets }                  = useBets()
 
+  // ── Deep-link from push notification ────────────────────────────────────────
+  useEffect(() => {
+    // Case 1: app was opened cold via ?match=XXX URL (from SW openWindow)
+    const params = new URLSearchParams(window.location.search)
+    const matchParam = params.get('match')
+    if (matchParam) {
+      setActiveMatchId(Number(matchParam))
+      // Clean the URL so back-navigation works normally
+      window.history.replaceState({}, '', '/')
+    }
+
+    // Case 2: app was already open — SW sends a postMessage
+    function handleSwMessage(event) {
+      if (event.data?.type === 'OPEN_MATCH' && event.data.matchId) {
+        setActiveMatchId(Number(event.data.matchId))
+        setActiveMatchTab(null)
+      }
+    }
+    navigator.serviceWorker?.addEventListener('message', handleSwMessage)
+    return () => navigator.serviceWorker?.removeEventListener('message', handleSwMessage)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { canInstall, install, dismiss } = useInstallPrompt()
+
   const pendingCount = bets.filter(b => b.status === 'pending').length
   function bumpStats() { setStatsKey(k => k + 1) }
 
@@ -34,7 +60,7 @@ function Shell() {
   if (activeMatchId) {
     return (
       <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
-        <Sidebar page={page} setPage={(p) => { setPage(p); closeMatch() }} />
+        <Sidebar page={page} setPage={(p) => { setPage(p); closeMatch() }} canInstall={canInstall} onInstall={install} />
         <div className="flex-1 flex flex-col min-w-0">
           <div className="md:ml-(--sidebar-w) flex flex-col min-h-screen">
             <AnimatePresence mode="wait">
@@ -47,6 +73,7 @@ function Shell() {
           </div>
         </div>
         <BottomNav page={page} setPage={(p) => { setPage(p); closeMatch() }} />
+        {canInstall && <InstallBanner onInstall={install} onDismiss={dismiss} />}
       </div>
     )
   }
@@ -61,7 +88,7 @@ function Shell() {
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>
-      <Sidebar page={page} setPage={setPage} />
+      <Sidebar page={page} setPage={setPage} canInstall={canInstall} onInstall={install} />
 
       <div className="flex-1 flex flex-col min-w-0" style={{ marginLeft: 0 }}
         data-main="true">
@@ -83,6 +110,7 @@ function Shell() {
       </div>
 
       <BottomNav page={page} setPage={setPage} />
+      {canInstall && <InstallBanner onInstall={install} onDismiss={dismiss} />}
     </div>
   )
 }

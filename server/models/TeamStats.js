@@ -27,6 +27,18 @@ const TeamStatsSchema = new Schema({
   failedToScore:     Number,
   failedToScoreRate: Number,   // percentage 0–100
 
+  // Home / Away split
+  homeGamesPlayed:      Number,
+  awayGamesPlayed:      Number,
+  homeWins:             Number,
+  awayWins:             Number,
+  homeWinRate:          Number,   // percentage 0–100
+  awayWinRate:          Number,   // percentage 0–100
+  avgGoalsScoredHome:   Number,
+  avgGoalsScoredAway:   Number,
+  avgGoalsConcededHome: Number,
+  avgGoalsConcededAway: Number,
+
   fetchedAt: { type: Date, default: Date.now },
   expiresAt: { type: Date, expires: 0 },          // TTL: 7 days (set on write)
 })

@@ -1,5 +1,5 @@
-const fetch    = require('node-fetch')
-const TeamLogo = require('../models/TeamLogo')
+const { apiFetch } = require('../config/apiClient')
+const TeamLogo     = require('../models/TeamLogo')
 
 // Domestic leagues only — cup teams are the same clubs, European comps covered by domestic leagues
 const LEAGUE_IDS = [
@@ -21,20 +21,8 @@ const SEASON     = 2024
 // In-memory map: teamId → logo URL  (populated once from DB)
 let logoMap = null
 
-function apiHeaders() {
-  const isRapidAPI = process.env.APIFOOTBALL_HOST?.includes('rapidapi.com')
-  return isRapidAPI
-    ? { 'x-rapidapi-key': process.env.APIFOOTBALL_KEY, 'x-rapidapi-host': process.env.APIFOOTBALL_HOST }
-    : { 'x-apisports-key': process.env.APIFOOTBALL_KEY }
-}
-
 async function fetchLeagueTeams(leagueId) {
-  const res = await fetch(
-    `https://${process.env.APIFOOTBALL_HOST}/teams?league=${leagueId}&season=${SEASON}`,
-    { headers: apiHeaders() }
-  )
-  if (!res.ok) throw new Error(`teams fetch failed for league ${leagueId}: ${res.status}`)
-  const json = await res.json()
+  const json = await apiFetch(`/teams?league=${leagueId}&season=${SEASON}`)
   return (json.response || []).map(entry => ({
     teamId:   entry.team.id,
     name:     entry.team.name,

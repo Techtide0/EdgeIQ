@@ -6,6 +6,7 @@ const schema = new mongoose.Schema({
   subscription:     { type: mongoose.Schema.Types.Mixed, required: true }, // PushSubscription JSON
   lastNotifiedAt:   { type: Date, default: null },  // last time we fired a notification
   lastEventCount:   { type: Number, default: 0 },   // events already notified about
+  notifiedPrematch: { type: Boolean, default: false }, // 15-min pre-kickoff reminder sent
   notifiedKickoff:  { type: Boolean, default: false },
   notifiedHT:       { type: Boolean, default: false },
   notifiedFT:       { type: Boolean, default: false },
