@@ -127,6 +127,20 @@
   .btn-danger:hover { opacity: 0.85; }
   .btn-danger:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
 
+  /* Keyboard focus ring for inputs/selects/textareas */
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 0;
+  }
+
+  /* Keyboard focus ring for bare buttons (not using btn-* classes) */
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   .live-dot {
     width: 7px; height: 7px;
     border-radius: 50%;

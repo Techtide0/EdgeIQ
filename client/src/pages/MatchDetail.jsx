@@ -868,7 +868,7 @@ function InsightsTab({ matchId, getToken }) {
       {/* 12. Markets Grid */}
       {insight.markets && <MarketsGrid markets={insight.markets} />}
 
-      {/* 10. Reasoning */}
+      {/* 13. Reasoning */}
       {insight.reasoning?.length > 0 && (
         <div className="card p-4">
           <p className="text-[10px] font-semibold uppercase tracking-wider mb-3"

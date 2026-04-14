@@ -85,10 +85,10 @@ export default function BetCard({ bet, onUpdate, onDelete, compact }) {
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{STATUS_CONFIG[s]?.label || s}</option>)}
         </select>
         <div className="flex gap-2">
-          <button onClick={handleSave} disabled={loading} className="btn-primary text-xs py-1.5 flex-1">
+          <button type="button" onClick={handleSave} disabled={loading} className="btn-primary text-xs py-1.5 flex-1">
             <Check size={13} /> Save
           </button>
-          <button onClick={() => setEditing(false)} className="btn-ghost text-xs py-1.5 flex-1">
+          <button type="button" onClick={() => setEditing(false)} className="btn-ghost text-xs py-1.5 flex-1">
             <X size={13} /> Cancel
           </button>
         </div>
@@ -196,12 +196,12 @@ export default function BetCard({ bet, onUpdate, onDelete, compact }) {
                 onBlur={e => e.target.style.borderColor = 'var(--border)'} />
               {cashoutError && <p className="text-xs" style={{ color: 'var(--danger)' }}>{cashoutError}</p>}
               <div className="flex gap-2">
-                <button onClick={handleCashout} disabled={loading}
+                <button type="button" onClick={handleCashout} disabled={loading}
                   className="btn-primary flex-1 text-xs py-2 justify-center"
                   style={{ background: 'var(--info)' }}>
                   Confirm
                 </button>
-                <button onClick={() => { setCashoutMode(false); setCashoutError(null) }}
+                <button type="button" onClick={() => { setCashoutMode(false); setCashoutError(null) }}
                   className="btn-ghost flex-1 text-xs py-2 justify-center">
                   Cancel
                 </button>
